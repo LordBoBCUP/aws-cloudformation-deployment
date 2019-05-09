@@ -64,6 +64,33 @@ function populate_aws_ec2_instances() {
   valid_aws_ec2_instances['us2']='us-east-2'
 }
 
+function validatePreReqs() {
+  if ! [ -x "$(command -v jq)" ]; 
+  then
+    log jq not found.
+    exit 1
+  fi
+
+  if ! [ -x "$(command -v aws)" ];
+  then
+    log aws not found.
+    exit 1
+  fi
+
+  if ! [ -x "$(command -v helm)" ];
+  then
+    log helm not found.
+    exit 1
+  fi
+
+  if ! [ -x "$(command -v eksctl)" ];
+  then
+    #log eksctl not found.
+    #exit 1
+    echo "lol"
+  fi
+}
+
 function validateInput() {
   if [[ ${region,,} =~ $pattern ]] ; 
   then
@@ -117,7 +144,7 @@ function setEKSCTLTemplate() {
   #sed -i -e "/region =/ s/= .*/= $region/" /home/alex/.aws/config
   sed -i -e "/name:/ s/:.*/: $ClusterName/" $template
   sed -i -e "/region:/ s/:.*/: $fullRegion/" $template
-  sed -i -e "/version:/ s/:.*/: $version/" $template
+  sed -i -e "/version:/ s/:.*/: \"$version\"/" $template
 
   sed -i -e "/- name:/ s/:.*/: $nodeGroupName/" $template
   sed -i -e "/instanceType:/ s/:.*/: $nodeType/" $template
@@ -133,7 +160,8 @@ function setEKSCTLTemplate() {
 
 function executeEKSCTL() {
   #eksctl create cluster --name=$clusterName --version=$version --nodes=$numOfNodes --kubeconfig=$kubeConfig --node-type=$nodeType --node-volume-size=$nodeVolumeSize 
-  ERROR=$({ eksctl create cluster --config-file=$template } 2>&1)
+ # { ERROR=$( { eksctl create cluster --config-file=$template } 2>&1) }
+  { ERROR=$( { eksctl create cluster --config-file=$template 1>&3 ; } 2>&1); } 3>&1
 
   if [[ -z $ERROR ]];
   then
@@ -145,7 +173,7 @@ function executeEKSCTL() {
 
 function downloadAndExtractHelmChart(){
   helm repo update
-  helm fetch stable/cluster-autoscaler --untar true --untardir $ClusterName
+  helm fetch stable/cluster-autoscaler --untar --untardir $ClusterName
 }
 
 
@@ -184,6 +212,9 @@ function checkIfClusterExists() {
 function Main() {
   log started...
 
+  log validating prerequisites are available
+  validatePreReqs
+
   log validating user parameters...
 
   populate_aws_ec2_instances  
@@ -195,7 +226,7 @@ function Main() {
   log executing EKSCTL to create the cluster... 
 
   setEKSCTLTemplate
-  #executeEKSCTL
+  executeEKSCTL
 
   log cluster was successfully deployed.
   log attempting Cluster AutoScaler installation...
@@ -210,7 +241,7 @@ function Main() {
   
   # Excute & return helm chart
   log running Cluster Autoscaler Helm Chart
-  #executeCAHelmChart
+  executeCAHelmChart
 
   log completed...
 }
