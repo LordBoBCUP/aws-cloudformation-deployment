@@ -17,4 +17,6 @@ nodeGroups:
     privateNetworking: true
     ssh:
       publicKeyPath: /home/bob/id_rsa4096.pub
-    tags: {k8s.io/cluster-autoscaler/enabled:'',k8s.io/cluster-autoscaler:mx-us-west-2-p-cluster-1}
+    iam:
+      withAddonPolicies:
+        autoScaler: true
