@@ -1,0 +1,19 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: 
+  region: 
+  version: 
+
+nodeGroups:
+  - name: 
+    labels: {role: workers}
+    instanceType: 
+    desiredCapacity: 
+    minSize: 
+    maxSize: 
+    volumeSize: 
+    privateNetworking: true
+    ssh:
+      publicKeyPath: 

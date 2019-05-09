@@ -1,0 +1,112 @@
+{
+    "version": {
+        "1.12.7": [
+            {
+                "Region": "us-west-2",
+                "AMI": "ami-0923e4b35a30a5f53"
+            },
+            {
+                "Region": "us-east-1",
+                "AMI": "ami-0abcb9f9190e867ab"
+            },
+            {
+                "Region": "us-east-2",
+                "AMI": "ami-04ea7cb66af82ae4a"
+            },
+            {
+                "Region": "eu-central-1",
+                "AMI": "ami-0d741ed58ca5b342e"
+            },
+            {
+                "Region": "eu-north-1",
+                "AMI": "ami-0c65a309fc58f6907"
+            },
+            {
+                "Region": "eu-west-1",
+                "AMI": "ami-08716b70cac884aaa"
+            },
+            {
+                "Region": "eu-west-2",
+                "AMI": "ami-0c7388116d474ee10"
+            },
+            {
+                "Region": "eu-west-3",
+                "AMI": "ami-0560aea042fec8b12"
+            },
+            {
+                "Region": "ap-northeast-1",
+                "AMI": "ami-0bfedee6a7845c26d"
+            },
+            {
+                "Region": "ap-northeast-2",
+                "AMI": "ami-0a904348b703e620c"
+            },
+            {
+                "Region": "ap-south-1",
+                "AMI": "ami-09c3eb35bb3be46a4"
+            },
+            {
+                "Region": "ap-southeast-1",
+                "AMI": "ami-07b922b9b94d9a6d2"
+            },
+            {
+                "Region": "ap-southeast-2",
+                "AMI": "ami-0f0121e9e64ebd3dc"
+            }
+        ],
+        "1.11.9": [
+            {
+                "Region": "us-west-2",
+                "AMI": "ami-05ecac759c81e0b0c"
+            },
+            {
+                "Region": "us-east-1",
+                "AMI": "ami-02c1de421df89c58d"
+            },
+            {
+                "Region": "us-east-2",
+                "AMI": "ami-03b1b6cc34c010f9c"
+            },
+            {
+                "Region": "eu-central-1",
+                "AMI": "ami-0c2709025eb548246"
+            },
+            {
+                "Region": "eu-north-1",
+                "AMI": "ami-084bd3569d08c6e67"
+            },
+            {
+                "Region": "eu-west-1",
+                "AMI": "ami-0e82e73403dd69fa3"
+            },
+            {
+                "Region": "eu-west-2",
+                "AMI": "ami-0da9aa88dd2ec8297"
+            },
+            {
+                "Region": "eu-west-3",
+                "AMI": "ami-099369bc73d1cc66f"
+            },
+            {
+                "Region": "ap-northeast-1",
+                "AMI": "ami-0d555d5f56c843803"
+            },
+            {
+                "Region": "ap-northeast-2",
+                "AMI": "ami-0144ae839b1111571"
+            },
+            {
+                "Region": "ap-south-1",
+                "AMI": "ami-02071c0110dc365ba"
+            },
+            {
+                "Region": "ap-southeast-1",
+                "AMI": "ami-00c91afdb73cf7f93"
+            },
+            {
+                "Region": "ap-southeast-2",
+                "AMI": "ami-05f4510fcfe56961c"
+            }
+        ]
+    }
+}
