@@ -7,7 +7,7 @@
 #Args           : -r region -v version -                                                                                         
 #Author       	: Alex Massey                                                
 #Email         	: alex.massey@augensoftwaregroup.com 
-#Notes          : Assumes you have eksctl & helm installed                                         
+#Notes          : Assumes you have eksctl, aws, jq & helm installed                                         
 ###################################################################
 
 ########### VARIABLES ###########
@@ -169,6 +169,16 @@ function executeCAHelmChart(){
   fi
 }
 
+function checkIfClusterExists() {
+  result=$(aws eks describe-cluster --name $ClusterName --region $fullRegion)
+  status=$(echo $result | jq -r .cluster.status)
+  if [[ $status == 'ACTIVE' ]];
+  then
+    log Cluster already exists. ClusterName: $ClusterName
+    exit 1
+  fi
+}
+
 ########### MAIN ###########
 
 function Main() {
@@ -178,6 +188,9 @@ function Main() {
 
   populate_aws_ec2_instances  
   validateInput
+
+  log Checking if Cluster already exists in AWS region.
+  checkIfClusterExists
 
   log executing EKSCTL to create the cluster... 
 
