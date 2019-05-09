@@ -124,8 +124,8 @@ function setEKSCTLTemplate() {
   sed -i -e "/volumeSize:/ s/:.*/: $nodeVolumeSize/" $template
   sed -i -e "/desiredCapacity:/ s/:.*/: $numOfNodes/" $template
   sed -i -e "/minSize:/ s/:.*/: 1/" $template
-  let "max=$numOfNodes + 2"
-  sed -i -e "/maxSize:/ s/:.*/: $max/" $template
+  #let "max=$numOfNodes + 2"
+  sed -i -e "/maxSize:/ s/:.*/: 10/" $template
   sed -i -e "/publicKeyPath:/ s/:.*/: ${sshKey//\//\\/}/" $template
   #sed -i -e "/tags:/ s/:.*/: \{k8s.io\/cluster-autoscaler\/enabled:\'\',k8s.io\/cluster-autoscaler:$ClusterName\}/" $template # May not be required as we can pass the --asg-access command to the executable.
 }
