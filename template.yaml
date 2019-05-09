@@ -19,4 +19,4 @@ nodeGroups:
       publicKeyPath: /home/bob/id_rsa4096.pub
     iam:
       withAddonPolicies:
-        autoScaler: true
+        autoScaler: true 
