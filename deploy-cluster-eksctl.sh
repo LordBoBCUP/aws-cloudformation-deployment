@@ -1,12 +1,13 @@
 #!/bin/bash
 
 ###################################################################
-#Script Name	: deploy-cluster-eksctl.sh                                                                                              
-#Description	: Using EKSCTL from Weave to deploy a new EKS
+#Script Name	  : deploy-cluster-eksctl.sh                                                                                              
+#Description	  : Using EKSCTL from Weave to deploy a new EKS
 #               : cluster on AWS with the specified parameters.
 #Args           : -r region -v version -                                                                                         
 #Author       	: Alex Massey                                                
-#Email         	: alex.massey@augensoftwaregroup.com                                           
+#Email         	: alex.massey@augensoftwaregroup.com 
+#Notes          : Assumes you have eksctl & helm installed                                         
 ###################################################################
 
 ########### VARIABLES ###########
@@ -24,13 +25,11 @@ nodeType=
 nodeVolumeSize=
 template=
 sshKey=
-declare -a valid_aws_ec2_instances
+declare -A valid_aws_ec2_instances
 
 ## Logging ##
 LOGFILE=deploy-cluster-eksctl.sh.log
 RETAIN_NUM_LINES=1000
-
-## List of AWS EC2 Instances to choose from ##
 
 
 
@@ -38,6 +37,11 @@ RETAIN_NUM_LINES=1000
 function usage()
 {
     echo "usage: ./storageclass.sh [[[-r region ] | [-h]]"
+}
+
+function printUsageAndExit() {
+  usage
+  exit 1
 }
 
 function logsetup {
@@ -51,12 +55,152 @@ function log {
 }
 
 function populate_aws_ec2_instances() {
-    valid_aws_ec2_instances[0]="c5.xlarge"
+  ## List of AWS EC2 Instances to choose from ##
+  valid_aws_ec2_instances['ap1']='ap-northeast-1'
+  valid_aws_ec2_instances['ap2']='ap-southeast-2'
+  valid_aws_ec2_instances['eu1']='eu-west-2'
+  valid_aws_ec2_instances['eu2']='eu-central-1'
+  valid_aws_ec2_instances['us1']='us-west-2'
+  valid_aws_ec2_instances['us2']='us-east-2'
+}
 
+function validateInput() {
+  if [[ ${region,,} =~ $pattern ]] ; 
+  then
+    # Set full region
+    reg=${region,,}
+    fullRegion=${valid_aws_ec2_instances[$reg]}
+    log $fullRegion
+  else
+    printUsageAndExit
+  fi
+
+
+  if [[ $clusterId =~ ^[1-9]$ ]];
+  then
+    # Set the ClusterName Variable
+    ClusterName="$clusterPrefix$fullRegion-p-cluster-$clusterId"
+  else 
+    # Exit on error
+    printUsageAndExit
+  fi
+
+  if ! [[ ${version,,} =~ $versionPattern ]] ; 
+  then
+    printUsageAndExit
+  fi
+
+  if ! [[ ${nodeVolumeSize,,} =~ $nodeVolumeSizePattern ]] ; 
+  then
+    printUsageAndExit
+  fi
+
+  if ! [[ ${numOfNodes,,} =~ $numberOfNodesPattern ]] ; 
+  then
+    printUsageAndExit
+  fi
+
+  if [[ ! -f $sshKey ]];
+  then
+    printUsageAndExit
+  fi
+
+  if [[ ! -f $template ]];
+  then
+    printUsageAndExit
+  fi
+}
+
+function setEKSCTLTemplate() {
+  nodeGroupName=$ClusterName-ng-$clusterId
+
+  #sed -i -e "/region =/ s/= .*/= $region/" /home/alex/.aws/config
+  sed -i -e "/name:/ s/:.*/: $ClusterName/" $template
+  sed -i -e "/region:/ s/:.*/: $fullRegion/" $template
+  sed -i -e "/version:/ s/:.*/: $version/" $template
+
+  sed -i -e "/- name:/ s/:.*/: $nodeGroupName/" $template
+  sed -i -e "/instanceType:/ s/:.*/: $nodeType/" $template
+  sed -i -e "/volumeSize:/ s/:.*/: $nodeVolumeSize/" $template
+  sed -i -e "/desiredCapacity:/ s/:.*/: $numOfNodes/" $template
+  sed -i -e "/minSize:/ s/:.*/: 1/" $template
+  let "max=$numOfNodes + 2"
+  sed -i -e "/maxSize:/ s/:.*/: $max/" $template
+  sed -i -e "/publicKeyPath:/ s/:.*/: ${sshKey//\//\\/}/" $template
+  #sed -i -e "/tags:/ s/:.*/: \{k8s.io\/cluster-autoscaler\/enabled:\'\',k8s.io\/cluster-autoscaler:$ClusterName\}/" $template # May not be required as we can pass the --asg-access command to the executable.
+}
+
+
+function executeEKSCTL() {
+  #eksctl create cluster --name=$clusterName --version=$version --nodes=$numOfNodes --kubeconfig=$kubeConfig --node-type=$nodeType --node-volume-size=$nodeVolumeSize 
+  ERROR=$({ eksctl create cluster --config-file=$template } 2>&1)
+
+  if [[ -z $ERROR ]];
+  then
+    log An error has occurred. Error message is
+    log $ERROR
+    exit 1
+  fi
+}
+
+function downloadAndExtractHelmChart(){
+  helm repo update
+  helm fetch stable/cluster-autoscaler --untar true --untardir $ClusterName
+}
+
+
+function setCAHelmChartValues(){
+  cwd=$(pwd)
+  sed -i -e "/clusterName:/ s/:.*/: $ClusterName/" $cwd/$ClusterName/cluster-autoscaler/values.yaml
+  sed -i -e "/awsRegion:/ s/:.*/: $fullRegion/" $cwd/$ClusterName/cluster-autoscaler/values.yaml
+  sed -i -e "/sslCertPath:/ s/:.*/: \/etc\/kubernetes\/pki\/ca.crt/" $cwd/$ClusterName/cluster-autoscaler/values.yaml
+  sed -i -e "/create:/ s/:.*/: true/" $cwd/$ClusterName/cluster-autoscaler/values.yaml
+}
+
+function executeCAHelmChart(){
+  cwd="$(pwd)/$ClusterName/cluster-autoscaler"
+  ERROR=$({ helm install stable/cluster-autoscaler -f $cwd/values.yaml --name cluster-autoscaler --namespace default } 2>&1)
+
+  if [[ -z $ERROR ]];
+  then
+    log An error has occurred. Error message is
+    log $ERROR
+    exit 1
+  fi
 }
 
 ########### MAIN ###########
-log started...
+
+function Main() {
+  log started...
+
+  log validating user parameters...
+
+  populate_aws_ec2_instances  
+  validateInput
+
+  log executing EKSCTL to create the cluster... 
+
+  setEKSCTLTemplate
+  #executeEKSCTL
+
+  log cluster was successfully deployed.
+  log attempting Cluster AutoScaler installation...
+
+  # Download the Helm Chart to deploy
+  log Downloading helm chart and extracting to $ClusterName
+  downloadAndExtractHelmChart
+  
+  # Modify the values.yaml file 
+  log Modifying helm chart values.yaml
+  setCAHelmChartValues
+  
+  # Excute & return helm chart
+  log running Cluster Autoscaler Helm Chart
+  #executeCAHelmChart
+
+  log completed...
+}
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -91,87 +235,7 @@ while [ "$1" != "" ]; do
                                 exit 1
     esac
     shift
-done
-
-if [[ ${region,,} =~ $pattern ]] ; 
-then
-    # Set full region
-    fullRegion="us-west-2"
-else
-  usage
-  exit 1
-fi
+  done
 
 
-if [[ $clusterId =~ ^[1-9]$ ]];
-then
-    # Set the ClusterName Variable
-    ClusterName="$clusterPrefix$fullRegion-p-cluster-$clusterId"
-else 
-    # Exit on error
-    usage
-    exit 1
-fi
-
-if ! [[ ${version,,} =~ $versionPattern ]] ; 
-then
-  usage
-  exit 1
-fi
-
-if ! [[ ${nodeVolumeSize,,} =~ $nodeVolumeSizePattern ]] ; 
-then
-  usage
-  exit 1
-fi
-
-if ! [[ ${numOfNodes,,} =~ $numberOfNodesPattern ]] ; 
-then
-  usage
-  exit 1
-fi
-
-if [[ ! -f $sshKey ]];
-then
-  usage
-  exit 1
-fi
-
-if [[ ! -f $template ]];
-then
-  usage
-  exit 1
-fi
-
-nodeGroupName=$ClusterName-ng-$clusterId
-
-#sed -i -e "/region =/ s/= .*/= $region/" /home/alex/.aws/config
-sed -i -e "/name:/ s/:.*/: $ClusterName/" $template
-sed -i -e "/region:/ s/:.*/: $fullRegion/" $template
-sed -i -e "/version:/ s/:.*/: $version/" $template
-
-sed -i -e "/- name:/ s/:.*/: $nodeGroupName/" $template
-sed -i -e "/instanceType:/ s/:.*/: $nodeType/" $template
-sed -i -e "/volumeSize:/ s/:.*/: $nodeVolumeSize/" $template
-sed -i -e "/desiredCapacity:/ s/:.*/: $numOfNodes/" $template
-sed -i -e "/minSize:/ s/:.*/: 1/" $template
-let "max=$numOfNodes + 2"
-sed -i -e "/maxSize:/ s/:.*/: $max/" $template
-sed -i -e "/publicKeyPath:/ s/:.*/: ${sshKey//\//\\/}/" $template
-
-
-#eksctl create cluster --name=$clusterName --version=$version --nodes=$numOfNodes --kubeconfig=$kubeConfig --node-type=$nodeType --node-volume-size=$nodeVolumeSize 
-ERROR=$( { eksctl create cluster --config-file=$template } 2>&1 )
-
-if [[ -z $ERROR ]];
-then
-  log An error has occurred. Error message is:
-  log $ERROR
-  exit 1
-fi
-log cluster was successfully deployed.
-log attempting Cluster AutoScaler installation...
-
-
-
-log completed...
+Main
